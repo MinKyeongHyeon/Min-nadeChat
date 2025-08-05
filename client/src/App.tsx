@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { io, Socket } from 'socket.io-client';
 import LoginPage from './components/LoginPage';
 import ChatPage from './components/ChatPage';
+import { SERVER_URL } from './config';
 import './App.css';
 
 interface User {
@@ -19,7 +19,7 @@ interface Message {
 }
 
 const App: React.FC = () => {
-  const [socket, setSocket] = useState<Socket | null>(null);
+  const [socket, setSocket] = useState<WebSocket | null>(null);
   const [username, setUsername] = useState<string>('');
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [users, setUsers] = useState<User[]>([]);
@@ -27,121 +27,104 @@ const App: React.FC = () => {
   const [currentVote, setCurrentVote] = useState<any>(null);
 
   useEffect(() => {
-    // 개발 환경에서는 클라우드플레어 터널 사용
-    const serverUrl = process.env.NODE_ENV === 'production' 
-      ? 'https://caribbean-gave-years-utilities.trycloudflare.com'
-      : 'https://caribbean-gave-years-utilities.trycloudflare.com';
+    console.log('WebSocket 연결 시도:', SERVER_URL);
     
-    console.log('서버에 연결 시도:', serverUrl);
-    
-    const newSocket = io(serverUrl, {
-      transports: ['websocket', 'polling'], // 카페 와이파이 환경을 위한 fallback
-      timeout: 20000,
-      forceNew: true
-    });
-    setSocket(newSocket);
+    const ws = new WebSocket(SERVER_URL);
+    setSocket(ws);
 
-    // 연결 상태 이벤트
-    newSocket.on('connect', () => {
-      console.log('서버에 연결됨:', newSocket.id);
-    });
+    ws.onopen = () => {
+      console.log('WebSocket 연결됨');
+    };
 
-    newSocket.on('disconnect', () => {
-      console.log('서버와 연결 끊어짐');
-    });
+    ws.onclose = () => {
+      console.log('WebSocket 연결 끊어짐');
+      // 자동 재연결 시도
+      setTimeout(() => {
+        console.log('재연결 시도...');
+        const newWs = new WebSocket(SERVER_URL);
+        setSocket(newWs);
+      }, 3000);
+    };
 
-    newSocket.on('connect_error', (error) => {
-      console.error('연결 오류:', error);
-    });
+    ws.onerror = (error) => {
+      console.error('WebSocket 오류:', error);
+    };
 
-    // 소켓 이벤트 리스너
-    newSocket.on('join_success', (username: string) => {
-      console.log('입장 성공:', username);
-      setUsername(username);
-      setIsLoggedIn(true);
-    });
-
-    newSocket.on('join_error', (error: string) => {
-      console.error('입장 오류:', error);
-      alert(error);
-    });
-
-    newSocket.on('users_update', (users: User[]) => {
-      setUsers(users);
-    });
-
-    newSocket.on('receive_message', (message: Message) => {
-      setMessages(prev => [...prev, message]);
-    });
-
-    newSocket.on('user_joined', (message: Message) => {
-      setMessages(prev => [...prev, message]);
-    });
-
-    newSocket.on('user_left', (message: Message) => {
-      setMessages(prev => [...prev, message]);
-    });
-
-    newSocket.on('vote_started', (voteData: any) => {
-      setCurrentVote(voteData);
-    });
-
-    newSocket.on('vote_update', (voteData: any) => {
-      setCurrentVote((prev: any) => ({ ...prev, ...voteData }));
-    });
-
-    newSocket.on('vote_ended', (voteData: any) => {
-      setCurrentVote(null);
-    });
-
-    newSocket.on('vote_cancelled', (message: string) => {
-      setCurrentVote(null);
-      alert(message);
-    });
-
-    newSocket.on('vote_error', (error: string) => {
-      alert(error);
-    });
-
-    newSocket.on('kicked', (message: string) => {
-      alert(message);
-      setIsLoggedIn(false);
-      setUsername('');
-    });
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        handleMessage(data);
+      } catch (error) {
+        console.error('메시지 파싱 오류:', error);
+      }
+    };
 
     return () => {
-      newSocket.disconnect();
+      ws.close();
     };
   }, []);
 
+  const handleMessage = (data: any) => {
+    console.log('받은 메시지:', data);
+    
+    switch (data.type) {
+      case 'join_success':
+        console.log('입장 성공:', data.username);
+        setUsername(data.username);
+        setIsLoggedIn(true);
+        break;
+      case 'join_error':
+        console.error('입장 오류:', data.message);
+        alert(data.message);
+        break;
+      case 'users_update':
+        setUsers(data.users);
+        break;
+      case 'receive_message':
+        setMessages(prev => [...prev, data.message]);
+        break;
+      case 'user_joined':
+      case 'user_left':
+        setMessages(prev => [...prev, data.message]);
+        break;
+      case 'vote_started':
+        setCurrentVote(data);
+        break;
+      case 'vote_update':
+        setCurrentVote(prev => ({ ...prev, ...data }));
+        break;
+      case 'vote_ended':
+        setCurrentVote(null);
+        break;
+      case 'vote_cancelled':
+        setCurrentVote(null);
+        alert(data.message);
+        break;
+      case 'kicked':
+        alert(data.message);
+        setIsLoggedIn(false);
+        setUsername('');
+        break;
+      case 'vote_error':
+        alert(data.message);
+        break;
+    }
+  };
+
   const handleLogin = (username: string) => {
-    if (socket) {
-      console.log('입장 시도:', username, '소켓 연결 상태:', socket.connected);
-      if (!socket.connected) {
-        console.log('소켓이 연결되지 않음. 재연결 시도...');
-        socket.connect();
-      }
-      socket.emit('join', username);
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      console.log('입장 시도:', username);
+      socket.send(JSON.stringify({
+        type: 'join',
+        username: username
+      }));
     } else {
-      console.error('소켓이 없습니다.');
-      alert('서버 연결에 실패했습니다. 페이지를 새로고침해주세요.');
+      console.error('WebSocket이 연결되지 않음. 상태:', socket?.readyState);
+      alert('서버 연결에 실패했습니다. 잠시 후 다시 시도해주세요.');
     }
   };
 
   const handleLogout = () => {
-    if (socket) {
-      socket.disconnect();
-      const serverUrl = process.env.NODE_ENV === 'production' 
-        ? 'https://caribbean-gave-years-utilities.trycloudflare.com'
-        : 'https://caribbean-gave-years-utilities.trycloudflare.com';
-      
-      const newSocket = io(serverUrl, {
-        transports: ['websocket', 'polling'],
-        timeout: 20000,
-        forceNew: true
-      });
-      setSocket(newSocket);
-    }
     setIsLoggedIn(false);
     setUsername('');
     setUsers([]);
@@ -150,20 +133,29 @@ const App: React.FC = () => {
   };
 
   const sendMessage = (message: string) => {
-    if (socket && message.trim()) {
-      socket.emit('send_message', { message });
+    if (socket && socket.readyState === WebSocket.OPEN && message.trim()) {
+      socket.send(JSON.stringify({
+        type: 'send_message',
+        message: message
+      }));
     }
   };
 
   const startVote = (targetUsername: string) => {
-    if (socket) {
-      socket.emit('start_vote', targetUsername);
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({
+        type: 'start_vote',
+        targetUsername: targetUsername
+      }));
     }
   };
 
   const vote = (approve: boolean) => {
-    if (socket) {
-      socket.emit('vote', approve);
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({
+        type: 'vote',
+        approve: approve
+      }));
     }
   };
 
