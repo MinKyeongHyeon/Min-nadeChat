@@ -91,7 +91,7 @@ const App: React.FC = () => {
         setCurrentVote(data);
         break;
       case 'vote_update':
-        setCurrentVote(prev => ({ ...prev, ...data }));
+        setCurrentVote((prev: any) => ({ ...prev, ...data }));
         break;
       case 'vote_ended':
         setCurrentVote(null);
