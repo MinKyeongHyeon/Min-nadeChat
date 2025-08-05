@@ -26,7 +26,7 @@ io.on("connection", (socket) => {
   // 사용자 로그인
   socket.on("join", (username) => {
     console.log(`입장 요청: ${username} (소켓 ID: ${socket.id})`);
-    
+
     // 중복 이름 체크
     const existingUser = Array.from(connectedUsers.values()).find(
       (user) => user.username === username
@@ -51,7 +51,9 @@ io.on("connection", (socket) => {
       joinTime: new Date(),
     });
 
-    console.log(`입장 성공: ${username}, 현재 사용자 수: ${connectedUsers.size}`);
+    console.log(
+      `입장 성공: ${username}, 현재 사용자 수: ${connectedUsers.size}`
+    );
     socket.emit("join_success", username);
 
     // 모든 클라이언트에게 사용자 목록 업데이트 전송

@@ -1,14 +1,21 @@
-import { Hono } from 'hono';
-import { cors } from 'hono/cors';
+import { Hono } from "hono";
+import { cors } from "hono/cors";
 
 const app = new Hono();
 
 // CORS 설정
-app.use('*', cors({
-  origin: ['https://mingyeonghyeon.github.io', 'http://localhost:3000', 'http://localhost:3002'],
-  allowHeaders: ['Content-Type'],
-  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-}));
+app.use(
+  "*",
+  cors({
+    origin: [
+      "https://mingyeonghyeon.github.io",
+      "http://localhost:3000",
+      "http://localhost:3002",
+    ],
+    allowHeaders: ["Content-Type"],
+    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  })
+);
 
 // 연결된 사용자들을 저장할 객체 (Durable Objects 사용 권장하지만 간단히 메모리 사용)
 let connectedUsers = new Map();
@@ -40,16 +47,16 @@ class ChatRoom {
     webSocket.accept();
     this.sessions.add(webSocket);
 
-    webSocket.addEventListener('message', async (event) => {
+    webSocket.addEventListener("message", async (event) => {
       try {
         const data = JSON.parse(event.data);
         await this.handleMessage(webSocket, data);
       } catch (error) {
-        console.error('메시지 처리 오류:', error);
+        console.error("메시지 처리 오류:", error);
       }
     });
 
-    webSocket.addEventListener('close', () => {
+    webSocket.addEventListener("close", () => {
       this.sessions.delete(webSocket);
       this.handleDisconnect(webSocket);
     });
@@ -57,16 +64,16 @@ class ChatRoom {
 
   async handleMessage(webSocket, data) {
     switch (data.type) {
-      case 'join':
+      case "join":
         await this.handleJoin(webSocket, data.username);
         break;
-      case 'send_message':
+      case "send_message":
         await this.handleSendMessage(webSocket, data);
         break;
-      case 'start_vote':
+      case "start_vote":
         await this.handleStartVote(webSocket, data.targetUsername);
         break;
-      case 'vote':
+      case "vote":
         await this.handleVote(webSocket, data.approve);
         break;
     }
@@ -75,22 +82,26 @@ class ChatRoom {
   async handleJoin(webSocket, username) {
     // 중복 이름 체크
     const existingUser = Array.from(this.connectedUsers.values()).find(
-      user => user.username === username
+      (user) => user.username === username
     );
     if (existingUser) {
-      webSocket.send(JSON.stringify({
-        type: 'join_error',
-        message: '이미 사용 중인 이름입니다.'
-      }));
+      webSocket.send(
+        JSON.stringify({
+          type: "join_error",
+          message: "이미 사용 중인 이름입니다.",
+        })
+      );
       return;
     }
 
     // 최대 10명 제한
     if (this.connectedUsers.size >= 10) {
-      webSocket.send(JSON.stringify({
-        type: 'join_error',
-        message: '채팅방이 가득 찼습니다. (최대 10명)'
-      }));
+      webSocket.send(
+        JSON.stringify({
+          type: "join_error",
+          message: "채팅방이 가득 찼습니다. (최대 10명)",
+        })
+      );
       return;
     }
 
@@ -102,26 +113,31 @@ class ChatRoom {
       joinTime: new Date(),
     });
 
-    webSocket.send(JSON.stringify({
-      type: 'join_success',
-      username: username
-    }));
+    webSocket.send(
+      JSON.stringify({
+        type: "join_success",
+        username: username,
+      })
+    );
 
     // 모든 클라이언트에게 사용자 목록 업데이트 전송
     this.broadcast({
-      type: 'users_update',
-      users: Array.from(this.connectedUsers.values())
+      type: "users_update",
+      users: Array.from(this.connectedUsers.values()),
     });
 
     // 새로운 사용자 입장 메시지
-    this.broadcast({
-      type: 'user_joined',
-      message: {
-        type: 'system',
-        message: `${username}님이 입장했습니다.`,
-        timestamp: new Date().toISOString(),
-      }
-    }, webSocket);
+    this.broadcast(
+      {
+        type: "user_joined",
+        message: {
+          type: "system",
+          message: `${username}님이 입장했습니다.`,
+          timestamp: new Date().toISOString(),
+        },
+      },
+      webSocket
+    );
 
     console.log(`${username}님이 입장했습니다.`);
   }
@@ -135,13 +151,13 @@ class ChatRoom {
       username: user.username,
       message: data.message,
       timestamp: new Date().toISOString(),
-      type: 'user',
+      type: "user",
     };
 
     // 모든 클라이언트에게 메시지 전송
     this.broadcast({
-      type: 'receive_message',
-      message: message
+      type: "receive_message",
+      message: message,
     });
   }
 
@@ -154,25 +170,25 @@ class ChatRoom {
       if (this.currentVote && this.currentVote.targetId === user.id) {
         this.currentVote = null;
         this.broadcast({
-          type: 'vote_cancelled',
-          message: '투표 대상이 나가서 투표가 취소되었습니다.'
+          type: "vote_cancelled",
+          message: "투표 대상이 나가서 투표가 취소되었습니다.",
         });
       }
 
       // 모든 클라이언트에게 사용자 목록 업데이트 전송
       this.broadcast({
-        type: 'users_update',
-        users: Array.from(this.connectedUsers.values())
+        type: "users_update",
+        users: Array.from(this.connectedUsers.values()),
       });
 
       // 사용자 퇴장 메시지
       this.broadcast({
-        type: 'user_left',
+        type: "user_left",
         message: {
-          type: 'system',
+          type: "system",
           message: `${user.username}님이 퇴장했습니다.`,
           timestamp: new Date().toISOString(),
-        }
+        },
       });
 
       console.log(`${user.username}님이 퇴장했습니다.`);
@@ -181,12 +197,15 @@ class ChatRoom {
 
   broadcast(message, exclude = null) {
     const messageStr = JSON.stringify(message);
-    this.sessions.forEach(session => {
-      if (session !== exclude && session.readyState === WebSocket.READY_STATE_OPEN) {
+    this.sessions.forEach((session) => {
+      if (
+        session !== exclude &&
+        session.readyState === WebSocket.READY_STATE_OPEN
+      ) {
         try {
           session.send(messageStr);
         } catch (error) {
-          console.error('메시지 전송 오류:', error);
+          console.error("메시지 전송 오류:", error);
         }
       }
     });
@@ -194,19 +213,19 @@ class ChatRoom {
 }
 
 // 기본 라우트
-app.get('/', (c) => {
+app.get("/", (c) => {
   return c.json({
-    message: 'Min-nade Chat Server is running!',
-    status: 'healthy',
+    message: "Min-nade Chat Server is running!",
+    status: "healthy",
     connectedUsers: connectedUsers.size,
     maxUsers: 10,
     timestamp: new Date().toISOString(),
   });
 });
 
-app.get('/health', (c) => {
+app.get("/health", (c) => {
   return c.json({
-    status: 'healthy',
+    status: "healthy",
     uptime: process.uptime(),
     connectedUsers: connectedUsers.size,
     timestamp: new Date().toISOString(),
@@ -214,13 +233,13 @@ app.get('/health', (c) => {
 });
 
 // WebSocket 연결 핸들러
-app.get('/websocket', async (c) => {
-  const upgradeHeader = c.req.header('Upgrade');
-  if (upgradeHeader !== 'websocket') {
-    return c.text('Expected Upgrade: websocket', 426);
+app.get("/websocket", async (c) => {
+  const upgradeHeader = c.req.header("Upgrade");
+  if (upgradeHeader !== "websocket") {
+    return c.text("Expected Upgrade: websocket", 426);
   }
 
-  const chatRoomId = c.env.CHAT_ROOM.idFromName('main-room');
+  const chatRoomId = c.env.CHAT_ROOM.idFromName("main-room");
   const chatRoom = c.env.CHAT_ROOM.get(chatRoomId);
   return chatRoom.fetch(c.req.raw);
 });
