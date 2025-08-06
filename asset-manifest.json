@@ -1,15 +1,15 @@
 {
   "files": {
     "main.css": "/Min-nadeChat/static/css/main.6992bc5a.css",
-    "main.js": "/Min-nadeChat/static/js/main.f486ba46.js",
+    "main.js": "/Min-nadeChat/static/js/main.3733705d.js",
     "static/js/453.a3c1d153.chunk.js": "/Min-nadeChat/static/js/453.a3c1d153.chunk.js",
     "index.html": "/Min-nadeChat/index.html",
     "main.6992bc5a.css.map": "/Min-nadeChat/static/css/main.6992bc5a.css.map",
-    "main.f486ba46.js.map": "/Min-nadeChat/static/js/main.f486ba46.js.map",
+    "main.3733705d.js.map": "/Min-nadeChat/static/js/main.3733705d.js.map",
     "453.a3c1d153.chunk.js.map": "/Min-nadeChat/static/js/453.a3c1d153.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.6992bc5a.css",
-    "static/js/main.f486ba46.js"
+    "static/js/main.3733705d.js"
   ]
 }
