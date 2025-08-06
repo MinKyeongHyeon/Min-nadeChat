@@ -1,13 +1,20 @@
 {
   "name": "min-nade-chat",
   "version": "1.0.0",
-  "description": "Min-nade Chat - 모든 사람이 한 서버에서 채팅하는 웹 서비스",
+  "description": "Min-nade Chat - Socket.IO 채팅 서버",
+  "main": "server/server.js",
   "scripts": {
+    "start": "cd server && npm install && npm start",
     "install-all": "cd server && npm install && cd ../client && npm install",
-    "start": "concurrently \"npm run server\" \"npm run client\"",
-    "server": "cd server && npm run dev",
+    "server": "cd server && npm start",
     "client": "cd client && npm start",
     "build": "cd client && npm run build"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "glitch": {
+    "projectType": "node"
   },
   "devDependencies": {
     "concurrently": "^7.6.0"
