@@ -4,9 +4,9 @@
   "description": "Min-nade Chat Server",
   "main": "server.js",
   "scripts": {
-    "start": "node websocket-server.js",
-    "dev": "nodemon websocket-server.js",
-    "legacy": "node server.js",
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "websocket": "node websocket-server.js",
     "deploy": "wrangler deploy",
     "preview": "wrangler dev"
   },

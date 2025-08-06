@@ -7,8 +7,14 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
-    origin: "http://localhost:3000",
+    origin: [
+      "http://localhost:3000",
+      "https://mingyeonghyeon.github.io",
+      /^https:\/\/.*\.github\.io$/,
+      /^https:\/\/.*\.railway\.app$/
+    ],
     methods: ["GET", "POST"],
+    credentials: true
   },
 });
 
@@ -282,7 +288,7 @@ app.get("/health", (req, res) => {
   });
 });
 
-const PORT = process.env.PORT || 4001;
+const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
   console.log(`서버가 포트 ${PORT}에서 실행 중입니다.`);
 });
